@@ -26,6 +26,9 @@ namespace R_Monitor
         static int requestTimeout = string.IsNullOrEmpty(ConfigurationManager.AppSettings["requestTimeout"]) ?
             5000 : int.Parse(ConfigurationManager.AppSettings["requestTimeout"]);
 
+        static bool repeat = string.IsNullOrEmpty(ConfigurationManager.AppSettings["repeat"]) ?
+            true : bool.Parse(ConfigurationManager.AppSettings["repeat"]);
+
         static int connectDBTimeout = string.IsNullOrEmpty(ConfigurationManager.AppSettings["connectDBTimeout"]) ?
             3 : int.Parse(ConfigurationManager.AppSettings["connectDBTimeout"]);
 
@@ -95,14 +98,6 @@ namespace R_Monitor
                                             alRows.Add(r);
                                         }
 
-                                        //int i = 0;
-                                        //while (dr.Read())
-                                        //{
-                                        //    i++;
-                                        //    alRows.Add(
-                                        //    string a = (String.Format("{0}, {1}",dr[0], dr[1]));
-                                        //}
-                                        //Console.WriteLine(i);
                                         isSuccess = true;
                                     }
                                     else
@@ -166,6 +161,13 @@ namespace R_Monitor
                         siteDownHandler(url.Trim(), ex.Message);
                     }
                 }
+
+                if (repeat == false)
+                {
+                    Thread.Sleep(30000);
+                    break;
+                }
+
                 Console.WriteLine("Start next round in " + sleepSecs + " secs...");
                 Thread.Sleep(sleepSecs * 1000);
             }
@@ -181,7 +183,6 @@ namespace R_Monitor
                 ((HttpWebRequest)request).UserAgent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)";
 
                 HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
-                //HttpWebResponse response = (HttpWebResponse)request.GetResponse();
 
                 if (response == null || response.StatusCode != HttpStatusCode.OK)
                 {
