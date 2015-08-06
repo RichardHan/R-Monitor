@@ -1,0 +1,6 @@
+D:\GitHub\R-Monitor\R-Network\bin\Debug\R-Network.exe.config
+D:\GitHub\R-Monitor\R-Network\bin\Debug\R-Network.exe
+D:\GitHub\R-Monitor\R-Network\bin\Debug\R-Network.pdb
+D:\GitHub\R-Monitor\R-Network\obj\Debug\R-Network.csprojResolveAssemblyReference.cache
+D:\GitHub\R-Monitor\R-Network\obj\Debug\R-Network.exe
+D:\GitHub\R-Monitor\R-Network\obj\Debug\R-Network.pdb

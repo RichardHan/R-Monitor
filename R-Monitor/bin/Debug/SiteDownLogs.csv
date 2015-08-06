@@ -1,0 +1,23 @@
+8/6/2015 11:39:32 AM,http://admin3.trendmicro.com/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType%26timeout=1000,The remote server returned an error: (401) Unauthorized.
+8/6/2015 11:40:18 AM,http://admin3.trendmicro.com/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType%26timeout=1000,The remote server returned an error: (401) Unauthorized.
+8/6/2015 11:42:45 AM,http://10.64.202.100:8080/rest/android_report.json?sha1=000001F05B71356CF286AEACF4ADB43D18F46DFC%26userName=TMMS61%26timeout=10000,The remote server returned an error: (404) Not Found.
+8/6/2015 11:43:09 AM,http://10.64.202.100:8080/rest/android_report.json?sha1=000001F05B71356CF286AEACF4ADB43D18F46DFC%26userName=TMMS61%26timeout=10000,The remote server returned an error: (404) Not Found.
+8/6/2015 11:43:44 AM,http://10.40.46.155:10080/rest/android_report.json?sha1=000001F05B71356CF286AEACF4ADB43D18F46DFC%26userName=TMMS61%26timeout=10000,The remote server returned an error: (400) Bad Request.
+8/6/2015 11:44:29 AM,http://10.40.46.155:10080/rest/android_report.json?sha1=000001F05B71356CF286AEACF4ADB43D18F46DFC%26userName=TMMS61%26timeout=10000,The remote server returned an error: (400) Bad Request.
+8/6/2015 11:45:06 AM,http://10.40.46.155:10080/rest/android_report.json?sha1=000001F05B71356CF286AEACF4ADB43D18F46DFC%26userName=TMMS61%26timeout=10000,The remote server returned an error: (400) Bad Request.
+8/6/2015 11:49:01 AM,http://10.40.46.155:10080/rest/android_report.json?sha1=000001F05B71356CF286AEACF4ADB43D18F46DFC%26userName=TMMS61%26timeout=10000,The remote server returned an error: (400) Bad Request.
+8/6/2015 11:51:16 AM,http://10.40.46.155:10080/rest/android_report.json?sha1=000001F05B71356CF286AEACF4ADB43D18F46DFC%26userName=TMMS61%26timeout=10000,The remote server returned an error: (400) Bad Request.
+8/6/2015 11:51:42 AM,http://admin3.trendmicro.com/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType%26timeout=1000,The remote server returned an error: (401) Unauthorized.
+8/6/2015 11:52:55 AM,http://sjdc-docsweb01.us.trendnet.org/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType%26timeout=1000,The remote server returned an error: (401) Unauthorized.
+8/6/2015 11:57:23 AM,http://admin3.trendmicro.com/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType&timeout=1000,The remote server returned an error: (401) Unauthorized.
+8/6/2015 11:57:23 AM,http://sjdc-docsweb01.us.trendnet.org/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType&timeout=1000,The remote server returned an error: (401) Unauthorized.
+8/6/2015 11:58:49 AM,http://sjdc-docsweb01.us.trendnet.org/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType&timeout=1000,The remote server returned an error: (401) Unauthorized.
+8/6/2015 11:59:16 AM,http://admin3.trendmicro.com/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType&timeout=1000,The remote server returned an error: (401) Unauthorized.
+8/6/2015 11:59:50 AM,http://admin3.trendmicro.com/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType&timeout=1000,The remote server returned an error: (401) Unauthorized.
+8/6/2015 11:59:51 AM,http://sjdc-docsweb01.us.trendnet.org/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType&timeout=1000,The remote server returned an error: (401) Unauthorized.
+8/6/2015 12:01:06 PM,http://sjdc-docsweb01.us.trendnet.org/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType&timeout=1000,The remote server returned an error: (401) Unauthorized.
+8/6/2015 12:01:06 PM,http://admin3.trendmicro.com/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType&timeout=1000,The remote server returned an error: (401) Unauthorized.
+8/6/2015 12:01:26 PM,http://admin3.trendmicro.com/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType,The remote server returned an error: (401) Unauthorized.
+8/6/2015 12:02:34 PM,http://sjdc-docsweb01.us.trendnet.org/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType,The remote server returned an error: (401) Unauthorized.
+8/6/2015 12:02:35 PM,http://admin3.trendmicro.com/umbraco/cacheBrowser.aspx?clearByType=umbraco.cms.businesslogic.ContentType,The remote server returned an error: (401) Unauthorized.
+8/6/2015 2:53:41 PM,https://www.googleXXXXXXXXX.com.tw/?querystring=test&timeout=5000,The remote name could not be resolved: 'www.googlexxxxxxxxx.com.tw'

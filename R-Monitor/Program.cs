@@ -9,6 +9,7 @@ using System.Net.Mail;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace R_Monitor
 {
@@ -18,7 +19,15 @@ namespace R_Monitor
         static string smtpHost = ConfigurationManager.AppSettings["smtpHost"];
         static MailMessage message = new MailMessage();
 
-        static SmtpClient smtp = new SmtpClient(smtpHost);
+        static SmtpClient smtp = new SmtpClient()
+        {
+            Host = "smtp.gmail.com",
+            Port = 587,
+            EnableSsl = true,
+            DeliveryMethod = SmtpDeliveryMethod.Network,
+            UseDefaultCredentials = false,
+            Credentials = new NetworkCredential(from, ConfigurationManager.AppSettings["from_password"])            
+        };
 
         static int sleepSecs = string.IsNullOrEmpty(ConfigurationManager.AppSettings["sleepSecs"]) ?
             30 : int.Parse(ConfigurationManager.AppSettings["sleepSecs"]);
@@ -45,8 +54,11 @@ namespace R_Monitor
         static string from = ConfigurationManager.AppSettings["from"];
         static string receivers = ConfigurationManager.AppSettings["receivers"];
 
-        static StreamWriter webLiveWriter = new StreamWriter(@"SiteLiveLogs.csv", true);
-        static StreamWriter dbLiveWriter = new StreamWriter(@"DBLiveLogs.csv", true);
+        static string SiteLiveLogFileName = "SiteLiveLogs.csv";
+        static string DBSiteLogFileName = "DBLiveLogs.csv";
+        static string NetworkLogFileName = "NetworkDownLogs.csv";
+        static string DBErrorLogFileName = "DBErrorLogs.csv";
+        static string SiteDownLogFileName = "SiteDownLogs.csv";
 
         static void Main(string[] args)
         {
@@ -55,7 +67,7 @@ namespace R_Monitor
             {
                 message.To.Add(email);
             }
-
+            
             while (true)
             {
                 bool network = System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
@@ -140,6 +152,19 @@ namespace R_Monitor
 
                 string urls_value = ConfigurationManager.AppSettings["URLs"];
                 string[] urls = urls_value.Split(new string[] { "(@)" }, StringSplitOptions.RemoveEmptyEntries);
+
+                for (int i = 0; i < urls.Length; i++)
+                {
+                    urls[i] = urls[i].Trim();
+                    urls[i] = urls[i].Replace("&lt;", "<")
+                                                   .Replace("&amp;", "&")
+                                                   .Replace("&gt;", ">")
+                                                   .Replace("&quot;", "\"")
+                                                   .Replace("&apos;", "'");
+
+                    urls[i] = HttpUtility.UrlDecode(urls[i]);
+                }
+
                 foreach (string url in urls)
                 {
                     try
@@ -154,11 +179,11 @@ namespace R_Monitor
                                 int.TryParse(timeoutMatch.Groups[1].Value, out requestTimeout);
                             }
                         }
-                        var result = CheckURLAsync(url.Trim(), requestTimeout);
+                        var result = CheckURLAsync(url, requestTimeout);
                     }
                     catch (Exception ex)
                     {
-                        siteDownHandler(url.Trim(), ex.Message);
+                        siteDownHandler(url, ex.Message);
                     }
                 }
 
@@ -175,11 +200,11 @@ namespace R_Monitor
 
         static async Task CheckURLAsync(string url, int rt)
         {
-            url = url.Trim();
             WebRequest request = WebRequest.Create(url);
             try
             {
                 request.Timeout = rt;
+                request.UseDefaultCredentials = true;
                 ((HttpWebRequest)request).UserAgent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)";
 
                 HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
@@ -212,7 +237,7 @@ namespace R_Monitor
                 smtp.Send(message);
 
             //write log to scv.
-            using (StreamWriter outfile = new StreamWriter(@"NetworkDownLogs.csv", true))
+            using (StreamWriter outfile = new StreamWriter(NetworkLogFileName, true))
             {
                 outfile.WriteLine(DateTime.UtcNow.AddHours(8).ToString("G") + "," + "network" + "," + "");
             }
@@ -236,11 +261,8 @@ namespace R_Monitor
             message.Subject = mailsubjectPrefix + url + " is down";
             message.Body = "[" + machineName + "]" + Environment.NewLine + url.Trim() + Environment.NewLine + errorMsg;
 
-            if (enableSendMailWhenError)
-                smtp.Send(message);
-
             //write log to scv.
-            using (StreamWriter outfile = new StreamWriter(@"SiteDownLogs.csv", true))
+            using (StreamWriter outfile = new StreamWriter(SiteDownLogFileName, true))
             {
                 outfile.WriteLine(DateTime.UtcNow.AddHours(8).ToString("G") + "," + url.Trim()
                     + "," + errorMsg.Trim().Replace("\r", "").Replace("\n", ""));
@@ -248,15 +270,21 @@ namespace R_Monitor
 
             Type type = typeof(ConsoleColor);
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("[Down]" + url.Trim());
+            Console.WriteLine("[Down]" + url.Trim() + "  Error:" + errorMsg);
             Console.ResetColor();
+
+            if (enableSendMailWhenError)
+                smtp.Send(message);
         }
 
         private static void siteAliveHandler(string url)
         {
             if (isSaveLiveLog)
             {
-                webLiveWriter.WriteLine(DateTime.UtcNow.AddHours(8).ToString("G") + "," + url.Trim());
+                using (StreamWriter webLiveWriter = new StreamWriter(SiteLiveLogFileName, true))
+                {
+                    webLiveWriter.WriteLine(DateTime.UtcNow.AddHours(8).ToString("G") + "," + url.Trim());
+                }
             }
 
             Type type = typeof(ConsoleColor);
@@ -269,7 +297,10 @@ namespace R_Monitor
         {
             if (isSaveLiveLog)
             {
-                dbLiveWriter.WriteLine(DateTime.UtcNow.AddHours(8).ToString("G") + "," + server + "," + db + "," + ts.ToString() + "," + command);
+                using (StreamWriter dbLiveWriter = new StreamWriter(DBSiteLogFileName, true))
+                {
+                    dbLiveWriter.WriteLine(DateTime.UtcNow.AddHours(8).ToString("G") + "," + server + "," + db + "," + ts.ToString() + "," + command);
+                }
             }
 
             Type type = typeof(ConsoleColor);
@@ -292,7 +323,7 @@ namespace R_Monitor
             if (enableSendMailWhenError)
                 smtp.Send(message);
 
-            using (StreamWriter outputfile = new StreamWriter(@"DBErrorLogs.csv", true))
+            using (StreamWriter outputfile = new StreamWriter(DBErrorLogFileName, true))
             {
                 outputfile.WriteLine(DateTime.UtcNow.AddHours(8).ToString("G") + ","
                     + server + "," + db + "," + command + "," + errMsg.Replace("\r", "").Replace("\n", "") + "," + ts.ToString());
