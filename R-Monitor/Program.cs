@@ -1,5 +1,6 @@
-﻿using System;
-using System.Collections;
+﻿using log4net;
+using log4net.Config;
+using System;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Diagnostics;
@@ -15,59 +16,61 @@ namespace R_Monitor
 {
     class Program
     {
-        static string machineName = System.Environment.MachineName;
+        static string machineName = Environment.MachineName;
         static string smtpHost = ConfigurationManager.AppSettings["smtpHost"];
-        static MailMessage message = new MailMessage();
-
-        static SmtpClient smtp = new SmtpClient()
-        {
-            Host = "smtp.gmail.com",
-            Port = 587,
-            EnableSsl = true,
-            DeliveryMethod = SmtpDeliveryMethod.Network,
-            UseDefaultCredentials = false,
-            Credentials = new NetworkCredential(from, ConfigurationManager.AppSettings["from_password"])            
-        };
-
+        static int smtpPort = int.Parse(ConfigurationManager.AppSettings["smtpPort"]);
+        static bool smtpEnableSSL = bool.Parse(ConfigurationManager.AppSettings["smtpEnableSSL"]);
         static int sleepSecs = string.IsNullOrEmpty(ConfigurationManager.AppSettings["sleepSecs"]) ?
-            30 : int.Parse(ConfigurationManager.AppSettings["sleepSecs"]);
-
+          30 : int.Parse(ConfigurationManager.AppSettings["sleepSecs"]);
         static int requestTimeout = string.IsNullOrEmpty(ConfigurationManager.AppSettings["requestTimeout"]) ?
             5000 : int.Parse(ConfigurationManager.AppSettings["requestTimeout"]);
-
         static bool repeat = string.IsNullOrEmpty(ConfigurationManager.AppSettings["repeat"]) ?
             true : bool.Parse(ConfigurationManager.AppSettings["repeat"]);
-
         static int connectDBTimeout = string.IsNullOrEmpty(ConfigurationManager.AppSettings["connectDBTimeout"]) ?
             3 : int.Parse(ConfigurationManager.AppSettings["connectDBTimeout"]);
-
         static bool enableSendMailWhenError = string.IsNullOrEmpty(ConfigurationManager.AppSettings["enableSendMailWhenError"]) ?
             true : ConfigurationManager.AppSettings["enableSendMailWhenError"] == "true";
-
         static bool isSaveLiveLog = string.IsNullOrEmpty(ConfigurationManager.AppSettings["saveLiveLog"]) ?
             true : ConfigurationManager.AppSettings["saveLiveLog"] == "true";
-
         static string mailsubjectPrefix = string.IsNullOrEmpty(ConfigurationManager.AppSettings["mailsubjectPrefix"]) ?
             "[R-monitor]" : ConfigurationManager.AppSettings["mailsubjectPrefix"];
-
         static string connectionsandCommands = ConfigurationManager.AppSettings["connectionsandCommands"];
+        static string smtpCredentialsPassword = ConfigurationManager.AppSettings["smtpCredentialsPassword"];
+        static string smtpCredentialsName = ConfigurationManager.AppSettings["smtpCredentialsName"];
+        static bool mailEnableSendToDirectory = bool.Parse(ConfigurationManager.AppSettings["mailEnableSendToDirectory"]);
+        static string mailPickupDirectoryLocation = ConfigurationManager.AppSettings["mailPickupDirectoryLocation"];
         static string from = ConfigurationManager.AppSettings["from"];
         static string receivers = ConfigurationManager.AppSettings["receivers"];
 
-        static string SiteLiveLogFileName = "SiteLiveLogs.csv";
-        static string DBSiteLogFileName = "DBLiveLogs.csv";
-        static string NetworkLogFileName = "NetworkDownLogs.csv";
-        static string DBErrorLogFileName = "DBErrorLogs.csv";
-        static string SiteDownLogFileName = "SiteDownLogs.csv";
-
+        static MailMessage message = new MailMessage();
+        static SmtpClient smtpClient;
+        public static readonly ILog SiteLogger = LogManager.GetLogger("SiteLogger");
+        public static readonly ILog DbLogger = LogManager.GetLogger("DbLogger");
+        public static readonly ILog DefaultLogger = LogManager.GetLogger("DefaultLogger");
         static void Main(string[] args)
         {
+            XmlConfigurator.Configure();
+
+            smtpClient = new SmtpClient()
+            {
+                Host = smtpHost,
+                Port = smtpPort,
+                EnableSsl = smtpEnableSSL,
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false,
+            };
+
+            if (!string.IsNullOrEmpty(smtpCredentialsName))
+            {
+                smtpClient.Credentials = new NetworkCredential(smtpCredentialsName, smtpCredentialsPassword);
+            }
+
             message.From = new MailAddress(from);
             foreach (string email in receivers.Split(';'))
             {
-                message.To.Add(email);
+                message.To.Add(new MailAddress(email));
             }
-            
+
             while (true)
             {
                 bool network = System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
@@ -101,15 +104,8 @@ namespace R_Monitor
                             {
                                 using (SqlDataReader dr = cmd.ExecuteReader())
                                 {
-                                    ArrayList alRows = new ArrayList();
                                     if (dr.HasRows)
                                     {
-
-                                        foreach (System.Data.Common.DbDataRecord r in dr)
-                                        {
-                                            alRows.Add(r);
-                                        }
-
                                         isSuccess = true;
                                     }
                                     else
@@ -128,15 +124,18 @@ namespace R_Monitor
                         catch (Exception ex)
                         {
                             isSuccess = false;
-                            errorMsg = ex.Message;
+                            errorMsg = ex.Message.Trim().Replace("\r", "").Replace("\n", "");
+                            DefaultLogger.Error(ex);
+                            DefaultLogger.Error(ex);
                         }
 
                         sw.Stop();
+                        int totalSpendSec = sw.Elapsed.Seconds;
 
-                        if (sw.Elapsed.Seconds > connectDBTimeout)
+                        if (totalSpendSec > connectDBTimeout)
                         {
                             isSuccess = false;
-                            errorMsg = "Connection timeout. Spend time more than 3 secs.";
+                            errorMsg = "Connection timeout. Spend time " + totalSpendSec + "secs more than " + connectDBTimeout + " secs.";
                         }
 
                         if (isSuccess)
@@ -145,45 +144,49 @@ namespace R_Monitor
                         }
                         else
                         {
-                            dbErrorHandler(dbserver, db, command, errorMsg, sw.Elapsed);
+                            dbErrorHandler(dbserver, db, command, sw.Elapsed, errorMsg);
                         }
                     }
                 }
 
                 string urls_value = ConfigurationManager.AppSettings["URLs"];
-                string[] urls = urls_value.Split(new string[] { "(@)" }, StringSplitOptions.RemoveEmptyEntries);
 
-                for (int i = 0; i < urls.Length; i++)
+                if (!string.IsNullOrEmpty(urls_value))
                 {
-                    urls[i] = urls[i].Trim();
-                    urls[i] = urls[i].Replace("&lt;", "<")
-                                                   .Replace("&amp;", "&")
-                                                   .Replace("&gt;", ">")
-                                                   .Replace("&quot;", "\"")
-                                                   .Replace("&apos;", "'");
+                    string[] urls = urls_value.Split(new string[] { "(@)" }, StringSplitOptions.RemoveEmptyEntries);
 
-                    urls[i] = HttpUtility.UrlDecode(urls[i]);
-                }
-
-                foreach (string url in urls)
-                {
-                    try
+                    for (int i = 0; i < urls.Length; i++)
                     {
-                        string strRegex = @"timeout=(.*)";
-                        Regex timeoutRegex = new Regex(strRegex, RegexOptions.None);
-                        string strTargetString = url;
-                        foreach (Match timeoutMatch in timeoutRegex.Matches(strTargetString))
-                        {
-                            if (timeoutMatch.Success)
-                            {
-                                int.TryParse(timeoutMatch.Groups[1].Value, out requestTimeout);
-                            }
-                        }
-                        var result = CheckURLAsync(url, requestTimeout);
+                        urls[i] = urls[i].Trim()
+                                         .Replace("&lt;", "<")
+                                         .Replace("&amp;", "&")
+                                         .Replace("&gt;", ">")
+                                         .Replace("&quot;", "\"")
+                                         .Replace("&apos;", "'");
+
+                        urls[i] = HttpUtility.UrlDecode(urls[i]);
                     }
-                    catch (Exception ex)
+
+                    foreach (string url in urls)
                     {
-                        siteDownHandler(url, ex.Message);
+                        try
+                        {
+                            string strRegex = @"timeout=(.*)";
+                            Regex timeoutRegex = new Regex(strRegex, RegexOptions.None);
+                            string strTargetString = url;
+                            foreach (Match timeoutMatch in timeoutRegex.Matches(strTargetString))
+                            {
+                                if (timeoutMatch.Success)
+                                {
+                                    int.TryParse(timeoutMatch.Groups[1].Value, out requestTimeout);
+                                }
+                            }
+                            var result = CheckURLAsync(url, requestTimeout);
+                        }
+                        catch (Exception ex)
+                        {
+                            siteDownHandler(url, ex.Message.Trim().Replace("\r", "").Replace("\n", ""));
+                        }
                     }
                 }
 
@@ -211,7 +214,7 @@ namespace R_Monitor
 
                 if (response == null || response.StatusCode != HttpStatusCode.OK)
                 {
-                    siteDownHandler(url, "");
+                    siteDownHandler(url, "Response is null Or StatusCode not equals 200.");
                 }
                 else
                 {
@@ -220,7 +223,7 @@ namespace R_Monitor
             }
             catch (Exception ex)
             {
-                siteDownHandler(url, ex.Message);
+                siteDownHandler(url, ex.Message.Trim().Replace("\r", "").Replace("\n", ""));
             }
             finally
             {
@@ -230,22 +233,43 @@ namespace R_Monitor
 
         private static void networkDownHandler()
         {
-            message.Subject = machineName + "network is down";
-            message.Body = machineName + "network is down" + Environment.NewLine;
-
-            if (enableSendMailWhenError)
-                smtp.Send(message);
-
-            //write log to scv.
-            using (StreamWriter outfile = new StreamWriter(NetworkLogFileName, true))
-            {
-                outfile.WriteLine(DateTime.UtcNow.AddHours(8).ToString("G") + "," + "network" + "," + "");
-            }
-
+            SendEmail(machineName + " network not available", "" + Environment.NewLine);
+            DefaultLogger.Error(new Exception("Detecting Network not available."));
             Type type = typeof(ConsoleColor);
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine("[Down] network");
             Console.ResetColor();
+        }
+
+        private static void SendEmail(string subject, string body)
+        {
+            message.Subject = subject;
+            message.Body = body;
+
+            if (enableSendMailWhenError)
+            {
+                try
+                {
+                    if (mailEnableSendToDirectory)
+                    {
+                        if (!Directory.Exists(mailPickupDirectoryLocation))
+                        {
+                            Console.WriteLine(mailPickupDirectoryLocation + " directory not exists, auto create it.");
+                            Directory.CreateDirectory(mailPickupDirectoryLocation);
+                        }
+                        smtpClient.PickupDirectoryLocation = mailPickupDirectoryLocation;
+                        smtpClient.DeliveryMethod = System.Net.Mail.SmtpDeliveryMethod.SpecifiedPickupDirectory;
+                        smtpClient.EnableSsl = false;
+                    }
+
+                    smtpClient.Send(message);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex);
+                    DefaultLogger.Error(ex);
+                }
+            }
         }
 
         private static void networkAliveHandler()
@@ -258,33 +282,19 @@ namespace R_Monitor
 
         private static void siteDownHandler(string url, string errorMsg)
         {
-            message.Subject = mailsubjectPrefix + url + " is down";
-            message.Body = "[" + machineName + "]" + Environment.NewLine + url.Trim() + Environment.NewLine + errorMsg;
-
-            //write log to scv.
-            using (StreamWriter outfile = new StreamWriter(SiteDownLogFileName, true))
-            {
-                outfile.WriteLine(DateTime.UtcNow.AddHours(8).ToString("G") + "," + url.Trim()
-                    + "," + errorMsg.Trim().Replace("\r", "").Replace("\n", ""));
-            }
-
+            SiteLogger.Info("Down" + "," + url.Trim() + "," + errorMsg);
             Type type = typeof(ConsoleColor);
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine("[Down]" + url.Trim() + "  Error:" + errorMsg);
             Console.ResetColor();
-
-            if (enableSendMailWhenError)
-                smtp.Send(message);
+            SendEmail(mailsubjectPrefix + url + " is down", "[" + machineName + "]" + Environment.NewLine + url.Trim() + Environment.NewLine + errorMsg);
         }
 
         private static void siteAliveHandler(string url)
         {
             if (isSaveLiveLog)
             {
-                using (StreamWriter webLiveWriter = new StreamWriter(SiteLiveLogFileName, true))
-                {
-                    webLiveWriter.WriteLine(DateTime.UtcNow.AddHours(8).ToString("G") + "," + url.Trim());
-                }
+                SiteLogger.Info("Up" + "," + url.Trim());
             }
 
             Type type = typeof(ConsoleColor);
@@ -297,10 +307,7 @@ namespace R_Monitor
         {
             if (isSaveLiveLog)
             {
-                using (StreamWriter dbLiveWriter = new StreamWriter(DBSiteLogFileName, true))
-                {
-                    dbLiveWriter.WriteLine(DateTime.UtcNow.AddHours(8).ToString("G") + "," + server + "," + db + "," + ts.ToString() + "," + command);
-                }
+                DbLogger.Info("Up" + "," + server + "," + db + "," + ts.TotalSeconds + "," + command);
             }
 
             Type type = typeof(ConsoleColor);
@@ -309,26 +316,17 @@ namespace R_Monitor
             Console.ResetColor();
         }
 
-        private static void dbErrorHandler(string server, string db, string command, string errMsg, TimeSpan ts)
+        private static void dbErrorHandler(string server, string db, string command, TimeSpan ts, string errMsg)
         {
-            message.Subject = mailsubjectPrefix + "Connect to " + server + " " + db + " fail";
-            message.From = new MailAddress(from);
-
-            message.Body =
+            String body =
                 "[" + machineName + "]" + Environment.NewLine
                 + server + Environment.NewLine
                 + command + Environment.NewLine
                 + errMsg + Environment.NewLine + ts.ToString();
 
-            if (enableSendMailWhenError)
-                smtp.Send(message);
+            SendEmail(mailsubjectPrefix + "Connect to " + server + " " + db + " fail", body);
 
-            using (StreamWriter outputfile = new StreamWriter(DBErrorLogFileName, true))
-            {
-                outputfile.WriteLine(DateTime.UtcNow.AddHours(8).ToString("G") + ","
-                    + server + "," + db + "," + command + "," + errMsg.Replace("\r", "").Replace("\n", "") + "," + ts.ToString());
-            }
-
+            DbLogger.Info("Down" + "," + server + "," + db + "," + ts.TotalSeconds + "," + command + "," + errMsg);
             Type type = typeof(ConsoleColor);
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine("[DB Fail]" + server + " " + db + " " + ts.ToString());
