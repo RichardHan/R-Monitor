@@ -1,6 +1,0 @@
-D:\GitHub\R-Monitor\R-Monitor\bin\Release\R-Monitor.exe.config
-D:\GitHub\R-Monitor\R-Monitor\bin\Release\R-Monitor.exe
-D:\GitHub\R-Monitor\R-Monitor\bin\Release\R-Monitor.pdb
-D:\GitHub\R-Monitor\R-Monitor\obj\Release\R-Monitor.csprojResolveAssemblyReference.cache
-D:\GitHub\R-Monitor\R-Monitor\obj\Release\R-Monitor.exe
-D:\GitHub\R-Monitor\R-Monitor\obj\Release\R-Monitor.pdb
