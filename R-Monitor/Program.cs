@@ -34,7 +34,8 @@ namespace R_Monitor
             true : ConfigurationManager.AppSettings["saveLiveLog"] == "true";
         static string mailsubjectPrefix = string.IsNullOrEmpty(ConfigurationManager.AppSettings["mailsubjectPrefix"]) ?
             "[R-monitor]" : ConfigurationManager.AppSettings["mailsubjectPrefix"];
-        static string connectionsandCommands = ConfigurationManager.AppSettings["connectionsandCommands"];
+        static string connectionsandCommands = string.IsNullOrEmpty(ConfigurationManager.AppSettings["connectionsandCommands"]) ?
+            string.Empty : ConfigurationManager.AppSettings["connectionsandCommands"];
         static string smtpCredentialsPassword = ConfigurationManager.AppSettings["smtpCredentialsPassword"];
         static string smtpCredentialsName = ConfigurationManager.AppSettings["smtpCredentialsName"];
         static bool mailEnableSendToDirectory = bool.Parse(ConfigurationManager.AppSettings["mailEnableSendToDirectory"]);
@@ -157,14 +158,15 @@ namespace R_Monitor
 
                     for (int i = 0; i < urls.Length; i++)
                     {
-                        urls[i] = urls[i].Trim()
+
+                        string newUrl = urls[i].Trim()
                                          .Replace("&lt;", "<")
                                          .Replace("&amp;", "&")
                                          .Replace("&gt;", ">")
                                          .Replace("&quot;", "\"")
                                          .Replace("&apos;", "'");
 
-                        urls[i] = HttpUtility.UrlDecode(urls[i]);
+                        urls[i] = HttpUtility.UrlDecode(newUrl);
                     }
 
                     foreach (string url in urls)
