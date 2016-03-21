@@ -1,6 +1,0 @@
-D:\GitHub\R-Monitor\R-Network\bin\Release\R-Network.exe.config
-D:\GitHub\R-Monitor\R-Network\bin\Release\R-Network.exe
-D:\GitHub\R-Monitor\R-Network\bin\Release\R-Network.pdb
-D:\GitHub\R-Monitor\R-Network\obj\Release\R-Network.csprojResolveAssemblyReference.cache
-D:\GitHub\R-Monitor\R-Network\obj\Release\R-Network.exe
-D:\GitHub\R-Monitor\R-Network\obj\Release\R-Network.pdb
