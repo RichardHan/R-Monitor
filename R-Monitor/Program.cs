@@ -18,8 +18,10 @@ namespace R_Monitor
     {
         static string machineName = Environment.MachineName;
         static string smtpHost = ConfigurationManager.AppSettings["smtpHost"];
-        static int smtpPort = int.Parse(ConfigurationManager.AppSettings["smtpPort"]);
-        static bool smtpEnableSSL = bool.Parse(ConfigurationManager.AppSettings["smtpEnableSSL"]);
+        static int smtpPort = string.IsNullOrEmpty(ConfigurationManager.AppSettings["smtpPort"]) ?
+            25 : int.Parse(ConfigurationManager.AppSettings["smtpPort"]);
+        static bool smtpEnableSSL = string.IsNullOrEmpty(ConfigurationManager.AppSettings["smtpEnableSSL"]) ?
+            false : bool.Parse(ConfigurationManager.AppSettings["smtpEnableSSL"]);
         static int sleepSecs = string.IsNullOrEmpty(ConfigurationManager.AppSettings["sleepSecs"]) ?
           30 : int.Parse(ConfigurationManager.AppSettings["sleepSecs"]);
         static int requestTimeout = string.IsNullOrEmpty(ConfigurationManager.AppSettings["requestTimeout"]) ?
@@ -36,9 +38,11 @@ namespace R_Monitor
             "[R-monitor]" : ConfigurationManager.AppSettings["mailsubjectPrefix"];
         static string connectionsandCommands = string.IsNullOrEmpty(ConfigurationManager.AppSettings["connectionsandCommands"]) ?
             string.Empty : ConfigurationManager.AppSettings["connectionsandCommands"];
-        static string smtpCredentialsPassword = ConfigurationManager.AppSettings["smtpCredentialsPassword"];
+        static string smtpCredentialsPassword = string.IsNullOrEmpty(ConfigurationManager.AppSettings["smtpCredentialsPassword"]) ?
+           string.Empty : ConfigurationManager.AppSettings["smtpCredentialsPassword"];
         static string smtpCredentialsName = ConfigurationManager.AppSettings["smtpCredentialsName"];
-        static bool mailEnableSendToDirectory = bool.Parse(ConfigurationManager.AppSettings["mailEnableSendToDirectory"]);
+        static bool mailEnableSendToDirectory = string.IsNullOrEmpty(ConfigurationManager.AppSettings["mailEnableSendToDirectory"]) ?
+            false : bool.Parse(ConfigurationManager.AppSettings["mailEnableSendToDirectory"]);
         static string mailPickupDirectoryLocation = ConfigurationManager.AppSettings["mailPickupDirectoryLocation"];
         static string from = ConfigurationManager.AppSettings["from"];
         static string receivers = ConfigurationManager.AppSettings["receivers"];
@@ -90,6 +94,7 @@ namespace R_Monitor
                     string errorMsg = "";
                     string connString = connStringandCommand.Trim().Split(',')[0];
                     string command = connStringandCommand.Trim().Split(',')[1];
+                    bool hasRow = GetHasRow(connStringandCommand);
                     Stopwatch sw = new Stopwatch();
                     sw.Start();
                     using (SqlConnection conn = new SqlConnection(connString))
@@ -105,14 +110,17 @@ namespace R_Monitor
                             {
                                 using (SqlDataReader dr = cmd.ExecuteReader())
                                 {
-                                    if (dr.HasRows)
+                                    if (dr.HasRows == hasRow)
                                     {
                                         isSuccess = true;
                                     }
                                     else
                                     {
                                         isSuccess = false;
-                                        errorMsg = "ExecuteReader reutrn 0 rows.";
+                                        if (hasRow)
+                                        { errorMsg = "Task HasRow setting is True, that difference with ExecuteReader reutrn false."; }
+                                        else
+                                        { errorMsg = "Task HasRow setting is False, that difference with ExecuteReader reutrn false."; }
                                     }
                                 }
                             }
@@ -141,11 +149,11 @@ namespace R_Monitor
 
                         if (isSuccess)
                         {
-                            dbAliveHandler(dbserver, db, command, sw.Elapsed);
+                            dbAliveHandler(dbserver, db, command, hasRow, sw.Elapsed);
                         }
                         else
                         {
-                            dbErrorHandler(dbserver, db, command, sw.Elapsed, errorMsg);
+                            dbErrorHandler(dbserver, db, command, hasRow, sw.Elapsed, errorMsg);
                         }
                     }
                 }
@@ -194,13 +202,26 @@ namespace R_Monitor
 
                 if (repeat == false)
                 {
-                    Thread.Sleep(30000);
+                    int _sleepSec = 30;
+                    Console.WriteLine("\"Repeat\" setting is [FALSE]. R-Monitor will be closed in " + _sleepSec + " sec.");
+                    while (_sleepSec > 0)
+                    {
+                        _sleepSec--;
+                        Console.WriteLine("                                                       " + _sleepSec);
+                        Thread.Sleep(1000);
+                    }
                     break;
                 }
 
                 Console.WriteLine("Start next round in " + sleepSecs + " secs...");
                 Thread.Sleep(sleepSecs * 1000);
             }
+        }
+
+        static public bool GetHasRow(string connStringandCommand)
+        {
+            return connStringandCommand.Trim().Split(',').Length <= 2 ?
+                true : bool.Parse(connStringandCommand.Trim().Split(',')[2].Split('=')[1]);
         }
 
         static async Task CheckURLAsync(string url, int rt)
@@ -305,11 +326,11 @@ namespace R_Monitor
             Console.ResetColor();
         }
 
-        private static void dbAliveHandler(string server, string db, string command, TimeSpan ts)
+        private static void dbAliveHandler(string server, string db, string command, bool hasRow, TimeSpan ts)
         {
             if (isSaveLiveLog)
             {
-                DbLogger.Info("Up" + "," + server + "," + db + "," + ts.TotalSeconds + "," + command);
+                DbLogger.Info("Up" + "," + server + "," + db + "," + ts.TotalSeconds + "," + command + "," + hasRow);
             }
 
             Type type = typeof(ConsoleColor);
@@ -318,17 +339,18 @@ namespace R_Monitor
             Console.ResetColor();
         }
 
-        private static void dbErrorHandler(string server, string db, string command, TimeSpan ts, string errMsg)
+        private static void dbErrorHandler(string server, string db, string command, bool hasRow, TimeSpan ts, string errMsg)
         {
             String body =
                 "[" + machineName + "]" + Environment.NewLine
                 + server + Environment.NewLine
                 + command + Environment.NewLine
+                + hasRow + Environment.NewLine
                 + errMsg + Environment.NewLine + ts.ToString();
 
             SendEmail(mailsubjectPrefix + "Connect to " + server + " " + db + " fail", body);
 
-            DbLogger.Info("Down" + "," + server + "," + db + "," + ts.TotalSeconds + "," + command + "," + errMsg);
+            DbLogger.Info("Down" + "," + server + "," + db + "," + ts.TotalSeconds + "," + command + "," + hasRow + "," + errMsg);
             Type type = typeof(ConsoleColor);
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine("[DB Fail]" + server + " " + db + " " + ts.ToString());
