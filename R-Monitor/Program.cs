@@ -227,13 +227,16 @@ namespace R_Monitor
         static async Task CheckURLAsync(string url, int rt)
         {
             WebRequest request = WebRequest.Create(url);
+            request.Timeout = rt;
+            request.UseDefaultCredentials = true;                        
+            ((HttpWebRequest)request).UserAgent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)";
+
             try
             {
-                request.Timeout = rt;
-                request.UseDefaultCredentials = true;
-                ((HttpWebRequest)request).UserAgent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)";
-
-                HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
+                //TODO
+                //BUG,  for unknow reason, GetResponseAsync() will throw error.
+                //HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
+                HttpWebResponse response = (HttpWebResponse)request.GetResponse();
 
                 if (response == null || response.StatusCode != HttpStatusCode.OK)
                 {
