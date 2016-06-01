@@ -98,18 +98,20 @@ namespace R_Monitor
                     Stopwatch sw = new Stopwatch();
                     sw.Start();
                     using (SqlConnection conn = new SqlConnection(connString))
-                    {
+                    {                        
                         string dbserver = conn.DataSource;
                         string db = conn.Database;
+                        
                         try
                         {
                             SqlCommand cmd = conn.CreateCommand();
+                            cmd.CommandTimeout = connectDBTimeout;
                             cmd.CommandText = command;
                             conn.Open();
                             if (conn.State.ToString() == "Open")
                             {
                                 using (SqlDataReader dr = cmd.ExecuteReader())
-                                {
+                                {                                    
                                     if (dr.HasRows == hasRow)
                                     {
                                         isSuccess = true;
