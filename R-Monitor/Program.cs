@@ -92,8 +92,8 @@ namespace R_Monitor
                 {
                     bool isSuccess = true;
                     string errorMsg = "";
-                    string connString = connStringandCommand.Trim().Split(',')[0];
-                    string command = connStringandCommand.Trim().Split(',')[1];
+                    string connString = connStringandCommand.Trim().Split(new string[] { "(@)" }, StringSplitOptions.RemoveEmptyEntries)[0];
+                    string command = connStringandCommand.Trim().Split(new string[] { "(@)" }, StringSplitOptions.RemoveEmptyEntries)[1];
                     bool hasRow = GetHasRow(connStringandCommand);
                     Stopwatch sw = new Stopwatch();
                     sw.Start();
