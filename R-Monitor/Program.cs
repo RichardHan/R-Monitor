@@ -1,6 +1,7 @@
 ﻿using log4net;
 using log4net.Config;
 using System;
+using System.Collections.Specialized;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Diagnostics;
@@ -98,10 +99,10 @@ namespace R_Monitor
                     Stopwatch sw = new Stopwatch();
                     sw.Start();
                     using (SqlConnection conn = new SqlConnection(connString))
-                    {                        
+                    {
                         string dbserver = conn.DataSource;
                         string db = conn.Database;
-                        
+
                         try
                         {
                             SqlCommand cmd = conn.CreateCommand();
@@ -111,7 +112,7 @@ namespace R_Monitor
                             if (conn.State.ToString() == "Open")
                             {
                                 using (SqlDataReader dr = cmd.ExecuteReader())
-                                {                                    
+                                {
                                     if (dr.HasRows == hasRow)
                                     {
                                         isSuccess = true;
@@ -183,17 +184,12 @@ namespace R_Monitor
                     {
                         try
                         {
-                            string strRegex = @"timeout=(.*)";
-                            Regex timeoutRegex = new Regex(strRegex, RegexOptions.None);
-                            string strTargetString = url;
-                            foreach (Match timeoutMatch in timeoutRegex.Matches(strTargetString))
+                            if (url.IndexOf("?") > 0)
                             {
-                                if (timeoutMatch.Success)
-                                {
-                                    int.TryParse(timeoutMatch.Groups[1].Value, out requestTimeout);
-                                }
+                                NameValueCollection qscolls = HttpUtility.ParseQueryString(url.Substring(url.IndexOf("?")));
+                                int.TryParse(qscolls.Get("timeout"), out requestTimeout);
+                                var result = CheckURLAsync(url, requestTimeout);
                             }
-                            var result = CheckURLAsync(url, requestTimeout);
                         }
                         catch (Exception ex)
                         {
@@ -222,15 +218,15 @@ namespace R_Monitor
 
         static public bool GetHasRow(string connStringandCommand)
         {
-            return connStringandCommand.Trim().Split(',').Length <= 2 ?
-                true : bool.Parse(connStringandCommand.Trim().Split(',')[2].Split('=')[1]);
+            return connStringandCommand.Trim().Split(new string[] { "(@)" }, StringSplitOptions.RemoveEmptyEntries).Length <= 2 ?
+                true : bool.Parse(connStringandCommand.Trim().Split(new string[] { "(@)" }, StringSplitOptions.RemoveEmptyEntries)[2].Split('=')[1]);
         }
 
         static async Task CheckURLAsync(string url, int rt)
         {
             WebRequest request = WebRequest.Create(url);
             request.Timeout = rt;
-            request.UseDefaultCredentials = true;                        
+            request.UseDefaultCredentials = true;
             ((HttpWebRequest)request).UserAgent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)";
 
             try
