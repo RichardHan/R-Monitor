@@ -91,6 +91,7 @@ namespace R_Monitor
 
                 foreach (var connStringandCommand in connectionsandCommands.Split(new string[] { "|||||" }, StringSplitOptions.RemoveEmptyEntries))
                 {
+                    DefaultLogger.Debug("Start Execute - " + connStringandCommand);
                     bool isSuccess = true;
                     string errorMsg = "";
                     string connString = connStringandCommand.Trim().Split(new string[] { "(@)" }, StringSplitOptions.RemoveEmptyEntries)[0];
@@ -159,6 +160,7 @@ namespace R_Monitor
                             dbErrorHandler(dbserver, db, command, hasRow, sw.Elapsed, errorMsg);
                         }
                     }
+                    DefaultLogger.Debug("End Execute - " + connStringandCommand);
                 }
 
                 string urls_value = ConfigurationManager.AppSettings["URLs"];
@@ -182,6 +184,7 @@ namespace R_Monitor
 
                     foreach (string url in urls)
                     {
+                        DefaultLogger.Debug("Start Execute - " + url);
                         try
                         {
                             if (url.IndexOf("?") > 0)
@@ -195,6 +198,7 @@ namespace R_Monitor
                         {
                             siteDownHandler(url, ex.Message.Trim().Replace("\r", "").Replace("\n", ""));
                         }
+                        DefaultLogger.Debug("End Execute - " + url);
                     }
                 }
 
