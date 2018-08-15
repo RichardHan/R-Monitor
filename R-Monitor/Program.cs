@@ -222,8 +222,21 @@ namespace R_Monitor
 
         static public bool GetHasRow(string connStringandCommand)
         {
-            return connStringandCommand.Trim().Split(new string[] { "(@)" }, StringSplitOptions.RemoveEmptyEntries).Length <= 2 ?
-                true : bool.Parse(connStringandCommand.Trim().Split(new string[] { "(@)" }, StringSplitOptions.RemoveEmptyEntries)[2].Split('=')[1]);
+            var splitArr = connStringandCommand.Trim()
+                .Split(new string[] {"(@)"}, StringSplitOptions.RemoveEmptyEntries);
+
+            if (splitArr.Length <=2)
+            {
+                //Data Source=XXXX;Initial Catalog=XXXX;user id=XXXX;password=XXXX(@)select top 10 * from yourtable
+                return true;
+            }
+            else
+            {
+                //Data Source=XXXX;Initial Catalog=XXXX;user id=XXXX;password=XXXX(@)select top 10 * from yourtable(@)HasRows=True
+                //Data Source=XXXX;Initial Catalog=XXXX;user id=XXXX;password=XXXX(@)select top 10 * from yourtable(@)HasRows=False
+                return bool.Parse(splitArr[2].Split('=')[1]);
+            }
+
         }
 
         static async Task CheckURLAsync(string url, int rt)
