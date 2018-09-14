@@ -223,9 +223,9 @@ namespace R_Monitor
         static public bool GetHasRow(string connStringandCommand)
         {
             var splitArr = connStringandCommand.Trim()
-                .Split(new string[] {"(@)"}, StringSplitOptions.RemoveEmptyEntries);
+                .Split(new string[] { "(@)" }, StringSplitOptions.RemoveEmptyEntries);
 
-            if (splitArr.Length <=2)
+            if (splitArr.Length <= 2)
             {
                 //Data Source=XXXX;Initial Catalog=XXXX;user id=XXXX;password=XXXX(@)select top 10 * from yourtable
                 return true;
@@ -243,7 +243,17 @@ namespace R_Monitor
         {
             WebRequest request = WebRequest.Create(url);
             request.Timeout = rt;
-            request.UseDefaultCredentials = true;
+            int c0 = url.IndexOf("//");
+            int c1 = url.IndexOf(":",8);
+            int c2 = url.IndexOf("@");
+            if ((c1 != -1 && c2 != -1) && c2 > c1)
+            {
+                request.Credentials = new NetworkCredential(url.Substring(c0 + 2, c1 - c0 - 2), url.Substring(c1 + 1, c2 - c1 - 1));
+            }
+            else
+            {
+                request.UseDefaultCredentials = true;
+            }
             ((HttpWebRequest)request).UserAgent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)";
 
             try
