@@ -227,7 +227,9 @@ namespace R_Monitor
 
             if (splitArr.Length <= 2)
             {
-                //Data Source=XXXX;Initial Catalog=XXXX;user id=XXXX;password=XXXX(@)select top 10 * from yourtable
+                //Data Source=XXXX;Initial Catalog=XXXX;user id=XXXX;
+                //
+                //=XXXX(@)select top 10 * from yourtable
                 return true;
             }
             else
@@ -241,10 +243,13 @@ namespace R_Monitor
 
         static async Task CheckURLAsync(string url, int rt)
         {
+            Stopwatch timeDog = new Stopwatch();
+            timeDog.Start();
             WebRequest request = WebRequest.Create(url);
             request.Timeout = rt;
+            //parse credential from url
             int c0 = url.IndexOf("//");
-            int c1 = url.IndexOf(":",8);
+            int c1 = url.IndexOf(":", 8);
             int c2 = url.IndexOf("@");
             if ((c1 != -1 && c2 != -1) && c2 > c1)
             {
@@ -254,18 +259,16 @@ namespace R_Monitor
             {
                 request.UseDefaultCredentials = true;
             }
-            ((HttpWebRequest)request).UserAgent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)";
+
+            ((HttpWebRequest)request).UserAgent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1;R Monitor)";
 
             try
             {
-                //TODO
-                //BUG,  for unknow reason, GetResponseAsync() will throw error.
-                //HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
                 HttpWebResponse response = (HttpWebResponse)request.GetResponse();
 
                 if (response == null || response.StatusCode != HttpStatusCode.OK)
                 {
-                    siteDownHandler(url, "Response is null Or StatusCode not equals 200.");
+                    siteDownHandler(url, "TotalSecs:" + timeDog.Elapsed.TotalSeconds + "  Response is null Or StatusCode not equals 200.");
                 }
                 else
                 {
@@ -274,11 +277,12 @@ namespace R_Monitor
             }
             catch (Exception ex)
             {
-                siteDownHandler(url, ex.Message.Trim().Replace("\r", "").Replace("\n", ""));
+                siteDownHandler(url, "TotalSecs:" + timeDog.Elapsed.TotalSeconds + "  Exception Msg: " + ex.Message.Trim().Replace("\r", "").Replace("\n", ""));
             }
             finally
             {
                 request.Abort();
+                timeDog.Stop();
             }
         }
 
