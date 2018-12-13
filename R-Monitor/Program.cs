@@ -193,6 +193,9 @@ namespace R_Monitor
                                 int.TryParse(qscolls.Get("timeout"), out requestTimeout);
                                 var result = CheckURLAsync(url, requestTimeout);
                             }
+                            else {
+                                var result = CheckURLAsync(url, requestTimeout);
+                            }
                         }
                         catch (Exception ex)
                         {
